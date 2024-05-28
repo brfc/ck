@@ -1,0 +1,37 @@
+[
+    {
+        "Topic": "Network",
+        "commands": [
+            {
+                "tool": "ping",
+                "cmd": "ping -c 10 127.0.0.1",
+                "description": "Sends ICMP echo request packets to loopback."
+            },
+            {
+                "tool": "ifconfig",
+                "cmd": "ifconfig",
+                "description": "Displays the configuration of all active network  interfaces on the system, including IP addresses, MAC addresses, and network-related statistics."
+            }
+        ]
+    },
+    {
+        "Topic": "Shell",
+        "commands": [
+            {
+                "tool": "ls",
+                "cmd": "ls",
+                "description": "list directory content"
+            }
+        ]
+    },
+    {
+        "Topic": "System management",
+        "commands": [
+            {
+                "tool": "grep",
+                "cmd": "grep -Inr \"example\" /diectory",
+                "description": "Case insensitive recursive search fpr the string example."
+            }
+        ]
+    }
+]
