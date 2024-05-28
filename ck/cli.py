@@ -4,130 +4,116 @@ import json
 import os
 import textwrap
 
-# cheetsheat compose
-# [ 
-#       { 
-#           Topic: 
-#           commands : [(command_line , description), ...]
-#       } 
-#       , ...
-# ]
+CONFIG_FILE = "/Users/brfc/workspace/ck/conf.yaml"
 
-class cs:
+
+class CheatSheet:
     def __init__(self):
-        with open("conf.yaml", 'r') as f:
-            dict = yaml.safe_load(f)
-            self.fpath = dict["database"]
+        self.fpath = self._load_config()
 
-        self.fdict = self.check(self.fpath);
+    def _load_config(self):
+        with open(CONFIG_FILE, 'r') as f:
+            config = yaml.safe_load(f)
+        return config["database"]
 
-    def check(self, fpath):
-        if not os.path.exists(fpath):
-            with open(fpath, 'w') as file:
-                print("[CS] new db file at " + fpath)
-        with open(fpath, 'r') as file:
-            data = json.load(file)
-        return data
+    def _create_db_file_if_not_exists(self):
+        if not os.path.exists(self.fpath):
+            with open(self.fpath, 'w'):
+                pass  # Create an empty file
+            print("[CS] New database \
+                file created at", self.fpath)
 
-    def plist(self, l):
-        for item in l:
-            print("\t" + str(item['cmd']) + '\n' )
-            if item['description']:
-                print("\t\033[4mDESCRIPTION:\033[0m")
-                description = textwrap.fill(str(item['description']), width=40)
-                print("".join(["\n\t" + line for line in description.split("\n")]))
-            print("\t---")
-            print("")
+    def _read_commands_from_db(self):
+        with open(self.fpath, 'r') as file:
+            return json.load(file)
 
-    def la(self):
-        """
-        List all commands
-        """
-        cl = []
-        for t in self.fdict:
-            if (t["commands"] == []):
-                continue
-            print("\033[;1m" + t["Topic"] + ":\033[0m")
-            self.plist(t["commands"])
-
-    def lt(self):
-        """
-        List all topics
-        """
-        cl = []
-        for t in self.fdict:
-            print('\t' + t["Topic"])
-        
-    def ltool(self):
-        """
-        List all tools
-        """
-        cl = []
-        for t in self.fdict:
-            for c in t["commands"]:
-                # remove repeated cmds
-                if c["tool"] not in cl:
-                    cl.append(c["tool"])
-        for c in cl:
-            print('\t' + c)
-
-    def command_obj(self, cmd, description=None):
-        tool = cmd.split()[0]
-        description = "" if None else description
-        obj = { "tool": tool , "cmd": cmd, "description": description}
-        return obj
-    
-    def topic_obj(self, topic, cmd, description):
-        obj = {"Topic": topic, "commands": [self.command_obj(cmd,description)]}
-        return obj
-
-    def dump(self):
+    def _save_commands_to_db(self, data):
         with open(self.fpath, 'w') as f:
-            json.dump(self.fdict, f, indent=4)
-        print(self.fpath + " updated ")
+            json.dump(data, f, indent=4)
+        print("Database updated:", self.fpath)
 
+    def list_commands(self, commands):
+        for item in commands:
+            print("\t" + item['cmd'] + '\n' )
+            description = \
+                textwrap.fill(
+                    str(item.get('description', '')), 
+                    width=40
+                )
+            print("\t\033[4mDESCRIPTION:\033[0m")
+            print("".join(["\n\t" + \
+                line for line in description.split("\n")]))
+            print("\t---\n")
 
-    def k(self, topic, cmd, description):
-        for item in self.fdict:
+    def list_all(self):
+        data = self._read_commands_from_db()
+        for item in data:
+            if item["commands"]:
+                print("\033[;1m" + \
+                    item["Topic"] + ":\033[0m")
+                self.list_commands(item["commands"])
+
+    def list_topics(self):
+        data = self._read_commands_from_db()
+        for item in data:
+            print('\t' + item["Topic"])
+
+    def list_tools(self):
+        data = self._read_commands_from_db()
+        tools = set()
+        for item in data:
+            for cmd in item["commands"]:
+                tools.add(cmd["tool"])
+        for tool in sorted(tools):
+            print('\t' + tool)
+
+    def add_command(self, topic, cmd, description):
+        data = self._read_commands_from_db()
+        for item in data:
             if item["Topic"] == topic:
-                cmd_obj = self.command_obj(cmd, description)
-                item["commands"].append(self.command_obj(cmd, description))
-                self.dump()
-                return     
-        self.fdict.append( self.topic_obj(topic, cmd, description))
-        self.dump()
-        
+                item["commands"].append(\
+                    {
+                    "tool": cmd.split()[0], \
+                    "cmd": cmd, "description": description
+                    })
+                self._save_commands_to_db(data)
+                return
+        data.append(\
+            {"Topic": topic, "commands": \
+                [{"tool": cmd.split()[0], 
+                "cmd": cmd, "description": description}
+            ]})
+        self._save_commands_to_db(data)
 
-    
-## Client line options
+
+## CLI Commands
 @click.group()
-def scl():
+def cli():
     pass
 
 @click.command(help="Save the following command with [--description]")
 @click.argument('cmd')
-@click.option('--topic', "--t", required=True, help='command topic')
-@click.option('--description', "--d", help='command description')
+@click.option('--topic', "--t", required=True, help='Command topic')
+@click.option('--description', "--d", help='Command description')
 def keep(cmd, topic, description):
-    sheet = cs()
-    sheet.k(topic, cmd, description)
+    cheat_sheet = CheatSheet()
+    cheat_sheet.add_command(topic, cmd, description)
 
-@click.command(help="List sheetcheat commands")
-@click.option('--topic','--t', is_flag=True, help='list of topics in db')
-@click.option('--tool', is_flag=True, help='list of tools in db')
+@click.command(help="List cheat sheet commands")
+@click.option('--topic', '--t', is_flag=True, help='List topics')
+@click.option('--tool', is_flag=True, help='List tools')
 def list(topic, tool):
-    sheet = cs()
+    cheat_sheet = CheatSheet()
     if tool:
-        sheet.ltool()
+        cheat_sheet.list_tools()
     elif topic:
-        sheet.lt()
+        cheat_sheet.list_topics()
     else:
-        sheet.la()
-
-scl.add_command(keep)
-scl.add_command(list)
+        cheat_sheet.list_all()
 
 
+cli.add_command(keep)
+cli.add_command(list)
 
 if __name__ == '__main__':
-    scl()
+    cli()

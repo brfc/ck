@@ -10,7 +10,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'ck=ck.cli:scl',
+            'ck=ck.cli:cli',
         ],
     },
     author='R. Carvalho',
