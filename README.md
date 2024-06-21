@@ -11,7 +11,7 @@
     * pip install -e .
 
 ### Install 
-    * pip install .
+    * pip/pipx install .
 
 ### Usage
     * ck --help
